@@ -1,0 +1,27 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net10.0-windows</TargetFramework>
+    <UseWPF>true</UseWPF>
+    <UseWindowsForms>true</UseWindowsForms>
+    <ApplicationIcon>assets\Alter.ico</ApplicationIcon>
+
+    <!-- Version attributes live in AssemblyInfo.cs -->
+    <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
+    
+    <!-- Keep the existing code compiling as written -->
+    <ImplicitUsings>disable</ImplicitUsings>
+    <Nullable>disable</Nullable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- 
+      Alter loads these from the folder next to Alter.exe 
+      TODO: move these to an installation folder to fetch from.
+    -->
+    <None Include="assets\**" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="community\**" Exclude="community\*cache.json" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
+</Project>
