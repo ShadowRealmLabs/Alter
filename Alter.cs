@@ -9,14 +9,39 @@ using System.Windows.Media.Imaging;
 using System.Windows.Markup;
 using System.Windows.Input;
 using System.Windows.Shell;
+using System.Text.Json;
 class Profile
 {
-	public string id, name, process, version, externalTrainer, sourcePage, bannerImage, coverImage; public List<Feature> cheats = new List<Feature>();
+	public string id { get; set; }
+	public string name { get; set; }
+	public string process { get; set; }
+	public string version { get; set; }
+	public string externalTrainer { get; set; }
+	public string sourcePage { get; set; }
+	public string bannerImage { get; set; }
+	public string coverImage { get; set; }
+	public List<Feature> cheats { get; set; } = new List<Feature>();
 }
+
 class Feature
 {
-	public string id, name, category, kind, address, dataType, value, hotkey, scriptMode, scriptOn, scriptOff, scriptTick; public bool freeze, hidden, trusted;
+	public string id { get; set; }
+	public string name { get; set; }
+	public string category { get; set; }
+	public string kind { get; set; }
+	public string address { get; set; }
+	public string dataType { get; set; }
+	public string value { get; set; }
+	public string hotkey { get; set; }
+	public string scriptMode { get; set; }
+	public string scriptOn { get; set; }
+	public string scriptOff { get; set; }
+	public string scriptTick { get; set; }
+	public bool freeze { get; set; }
+	public bool hidden { get; set; }
+	public bool trusted { get; set; }
 }
+
 partial class Alter : Window
 {
 	string root = AppDomain.CurrentDomain.BaseDirectory; Grid body; TextBox search; Profile selected; List<Profile> profiles = new List<Profile>();
@@ -76,6 +101,7 @@ partial class Alter : Window
 			Home();
 		Closed += (s, e) => { StopScripts(); if (session != null) session.Dispose(); };
 	}
+
 	Image Image(string file, Int32Rect crop, double w, double h)
 	{
 		ImageSource source = null;
@@ -89,20 +115,24 @@ partial class Alter : Window
 			catch { }
 		return new Image { Source = source, Width = w, Height = h, Stretch = Stretch.Uniform, Margin = new Thickness(0, 0, 10, 0) };
 	}
+
 	Button Button(string label, Action action, bool primary)
 	{
 		var b = new Button { Content = label, HorizontalAlignment = HorizontalAlignment.Left, MinWidth = 125, Height = 38, Margin = new Thickness(0, 12, 0, 0), Background = new SolidColorBrush(primary ? AccentColor : Color.FromRgb(15, 13, 31)), HorizontalContentAlignment = HorizontalAlignment.Left };
 		b.Click += (s, e) => action();
 		return b;
 	}
+
 	TextBlock Text(string t, double size, Brush color)
 	{
 		return new TextBlock { Text = t, FontSize = size, Foreground = color, TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 5, 0, 5) };
 	}
+
 	Border Card(UIElement child)
 	{
 		return new Border { Child = child, Background = new SolidColorBrush(Color.FromRgb(13, 13, 28)), BorderBrush = new SolidColorBrush(Color.FromRgb(33, 28, 48)), BorderThickness = new Thickness(1), CornerRadius = new CornerRadius(10), Padding = new Thickness(16), Margin = new Thickness(0, 0, 0, 12) };
 	}
+
 	void Load()
 	{
 		Directory.CreateDirectory(Path.Combine(root, "profiles"));
@@ -110,24 +140,29 @@ partial class Alter : Window
 		foreach (var f in Directory.GetFiles(Path.Combine(root, "profiles"), "*.json"))
 			try
 			{
-				profiles.Add(ProfileJson().Deserialize<Profile>(File.ReadAllText(f)));
+				profiles.Add(JsonSerializer.Deserialize<Profile>(File.ReadAllText(f)));
 			}
 			catch { }
 		if (selected == null)
 			selected = profiles.FirstOrDefault();
 	}
+
 	void Extensions()
 	{
 		ExtensionsPage();
 	}
+	
 	void Community()
 	{
 		CommunityPage();
 	}
+	
 	void Library()
 	{
 		LibraryPage();
 	}
+	
+	
 	[STAThread]
 	static void Main()
 	{

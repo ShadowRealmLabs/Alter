@@ -5,10 +5,15 @@ using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
+using System.Text.Json;
 
 class AlterRelease
 {
-	public string tag_name, name, html_url, published_at; public bool draft;
+	public string tag_name { get; set; }
+	public string name { get; set; }
+	public string html_url { get; set; }
+	public string published_at { get; set; }
+	public bool draft { get; set; }
 }
 
 partial class Alter
@@ -74,7 +79,7 @@ partial class Alter
 		status.Text = updateStatus;
 		try
 		{
-			var releases = await Task.Run(() => ProfileJson().Deserialize<List<AlterRelease>>(FetchCommunityText(AlterReleasesApi, 2 * 1024 * 1024)));
+			var releases = await Task.Run(() => JsonSerializer.Deserialize<List<AlterRelease>>(FetchCommunityText(AlterReleasesApi, 2 * 1024 * 1024)));
 			if (releases == null || releases.Count == 0)
 			{
 				updateStatus = "No published releases found yet.";
@@ -117,6 +122,7 @@ partial class Alter
 		Uri uri;
 		return Uri.TryCreate(url, UriKind.Absolute, out uri) && uri.Scheme == "https" && uri.Host.Equals("github.com", StringComparison.OrdinalIgnoreCase) && uri.AbsolutePath.StartsWith("/an1dxsh/Alter/releases/tag/", StringComparison.OrdinalIgnoreCase);
 	}
+	
 	string[] ParseReleaseVersion(string tag)
 	{
 		var match = Regex.Match(tag ?? "", @"^v?(\d+)\.(\d+)\.(\d+)(?:-([0-9A-Za-z.-]+))?$", RegexOptions.IgnoreCase);
@@ -127,6 +133,7 @@ partial class Alter
 			return null;
 		return new[] { major.ToString(), minor.ToString(), patch.ToString(), match.Groups[4].Value };
 	}
+	
 	int CompareReleaseVersions(string left, string right)
 	{
 		var a = ParseReleaseVersion(left);

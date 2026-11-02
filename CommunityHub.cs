@@ -11,26 +11,50 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
 using System.Windows.Media;
+using System.Text.Json;
 
 class CommunityCatalog
 {
-	public List<CommunityTrainer> trainers = new List<CommunityTrainer>();
+	public List<CommunityTrainer> trainers { get; set; } = new List<CommunityTrainer>();
 }
+
 class CommunityTrainer
 {
-	public string id, name, game, creator, description, version, updatedAt, type, repository, profileUrl, sha256; public bool featured;
+	public string id { get; set; }
+	public string name { get; set; }
+	public string game { get; set; }
+	public string creator { get; set; }
+	public string description { get; set; }
+	public string version { get; set; }
+	public string updatedAt { get; set; }
+	public string type { get; set; }
+	public string repository { get; set; }
+	public string profileUrl { get; set; }
+	public string sha256 { get; set; }
+	public bool featured { get; set; }
 }
+
 class CommunityRelease
 {
-	public string name, tag_name, html_url, published_at, body;
+	public string name { get; set; }
+	public string tag_name { get; set; }
+	public string html_url { get; set; }
+	public string published_at { get; set; }
+	public string body { get; set; }
 }
+
 class CommunityNewsFeed
 {
-	public List<CommunityPost> posts = new List<CommunityPost>();
+	public List<CommunityPost> posts { get; set; } = new List<CommunityPost>();
 }
+
 class CommunityPost
 {
-	public string title, excerpt, url, updatedAt, category;
+	public string title { get; set; }
+	public string excerpt { get; set; }
+	public string url { get; set; }
+	public string updatedAt { get; set; }
+	public string category { get; set; }
 }
 
 partial class Alter
@@ -513,7 +537,7 @@ partial class Alter
 			communityStatus.Text = communityMessage;
 		try
 		{
-			var result = await Task.Run(() => { var local = ReadCommunityCatalog(Path.Combine(root, "community", "catalog.json")); var cache = ReadCommunityCatalog(Path.Combine(root, "community", "cache.json")); var localNews = ReadCommunityNews(Path.Combine(root, "community", "discussions.json")); var cachedNews = ReadCommunityNews(Path.Combine(root, "community", "discussions-cache.json")); CommunityCatalog online = null; CommunityNewsFeed onlineNews = null; List<CommunityRelease> releases = null; try { online = ParseCommunityCatalog(FetchCommunityText(CommunityCatalogUrl, 2 * 1024 * 1024)); } catch { } try { onlineNews = ParseCommunityNews(FetchCommunityText(CommunityNewsUrl, 512 * 1024)); } catch { } try { releases = ProfileJson().Deserialize<List<CommunityRelease>>(FetchCommunityText(CommunityReleasesUrl, 2 * 1024 * 1024)); } catch { } return new { Catalog = online ?? cache ?? local, Online = online != null, News = onlineNews ?? cachedNews ?? localNews, OnlineNews = onlineNews != null, Releases = releases }; });
+			var result = await Task.Run(() => { var local = ReadCommunityCatalog(Path.Combine(root, "community", "catalog.json")); var cache = ReadCommunityCatalog(Path.Combine(root, "community", "cache.json")); var localNews = ReadCommunityNews(Path.Combine(root, "community", "discussions.json")); var cachedNews = ReadCommunityNews(Path.Combine(root, "community", "discussions-cache.json")); CommunityCatalog online = null; CommunityNewsFeed onlineNews = null; List<CommunityRelease> releases = null; try { online = ParseCommunityCatalog(FetchCommunityText(CommunityCatalogUrl, 2 * 1024 * 1024)); } catch { } try { onlineNews = ParseCommunityNews(FetchCommunityText(CommunityNewsUrl, 512 * 1024)); } catch { } try { releases = JsonSerializer.Deserialize<List<CommunityRelease>>(FetchCommunityText(CommunityReleasesUrl, 2 * 1024 * 1024)); } catch { } return new { Catalog = online ?? cache ?? local, Online = online != null, News = onlineNews ?? cachedNews ?? localNews, OnlineNews = onlineNews != null, Releases = releases }; });
 			communityTrainers = CleanCommunityCatalog(result.Catalog);
 			communityPosts = (result.News == null ? new List<CommunityPost>() : result.News.posts).Where(x => x != null && !String.IsNullOrWhiteSpace(x.title) && CommunityDiscussionLink(x.url)).Take(20).ToList();
 			communityReleases = (result.Releases ?? new List<CommunityRelease>()).Where(x => CommunityLink(x.html_url)).ToList();
@@ -523,7 +547,7 @@ partial class Alter
 				try
 				{
 					Directory.CreateDirectory(Path.Combine(root, "community"));
-					File.WriteAllText(Path.Combine(root, "community", "cache.json"), ProfileJson().Serialize(result.Catalog));
+					File.WriteAllText(Path.Combine(root, "community", "cache.json"), JsonSerializer.Serialize(result.Catalog));
 				}
 				catch { }
 			}
@@ -532,7 +556,7 @@ partial class Alter
 				try
 				{
 					Directory.CreateDirectory(Path.Combine(root, "community"));
-					File.WriteAllText(Path.Combine(root, "community", "discussions-cache.json"), ProfileJson().Serialize(result.News));
+					File.WriteAllText(Path.Combine(root, "community", "discussions-cache.json"), JsonSerializer.Serialize(result.News));
 				}
 				catch { }
 			}
@@ -554,7 +578,7 @@ partial class Alter
 	}
 	CommunityCatalog ParseCommunityCatalog(string json)
 	{
-		var data = ProfileJson().Deserialize<CommunityCatalog>(json);
+		var data = JsonSerializer.Deserialize<CommunityCatalog>(json);
 		return data != null && data.trainers != null ? data : null;
 	}
 	CommunityNewsFeed ReadCommunityNews(string path)
@@ -567,7 +591,7 @@ partial class Alter
 	}
 	CommunityNewsFeed ParseCommunityNews(string json)
 	{
-		var data = ProfileJson().Deserialize<CommunityNewsFeed>(json);
+		var data = JsonSerializer.Deserialize<CommunityNewsFeed>(json);
 		return data != null && data.posts != null ? data : null;
 	}
 	List<CommunityTrainer> CleanCommunityCatalog(CommunityCatalog catalog)
@@ -626,7 +650,7 @@ partial class Alter
 				hash = BitConverter.ToString(sha.ComputeHash(bytes)).Replace("-", "");
 			if (!hash.Equals(entry.sha256, StringComparison.OrdinalIgnoreCase))
 				throw new InvalidDataException("Checksum mismatch. The profile was not imported.");
-			var profile = ProfileJson().Deserialize<Profile>(Encoding.UTF8.GetString(bytes));
+			var profile = JsonSerializer.Deserialize<Profile>(Encoding.UTF8.GetString(bytes));
 			if (profile == null || String.IsNullOrWhiteSpace(profile.name) || String.IsNullOrWhiteSpace(profile.process))
 				throw new InvalidDataException("Invalid Alter trainer profile.");
 			profile.id = Guid.NewGuid().ToString("N");

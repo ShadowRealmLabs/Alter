@@ -3,25 +3,27 @@ using System.IO;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
+using System.Text.Json;
 
 class AlterPreferences
 {
-	public string Accent = "Amethyst";
-	public bool CompactLayout = false;
-	public bool ShowNews = true;
-	public bool ConfirmWrites = true;
-	public bool ConfirmRemovals = true;
-	public bool RememberWindowSize = true;
-	public bool MinimizeToTray = false;
-	public bool CloseToTray = false;
-	public string StartupPage = "Home";
-	public double WindowWidth = 1280;
-	public double WindowHeight = 853;
+	public string Accent { get; set; } = "Amethyst";
+	public bool CompactLayout { get; set; } = false;
+	public bool ShowNews { get; set; } = true;
+	public bool ConfirmWrites { get; set; } = true;
+	public bool ConfirmRemovals { get; set; } = true;
+	public bool RememberWindowSize { get; set; } = true;
+	public bool MinimizeToTray { get; set; } = false;
+	public bool CloseToTray { get; set; } = false;
+	public string StartupPage { get; set; } = "Home";
+	public double WindowWidth { get; set; } = 1280;
+	public double WindowHeight { get; set; } = 853;
 }
 
 partial class Alter
 {
 	AlterPreferences prefs = new AlterPreferences();
+	
 	string PreferencePath
 	{
 		get
@@ -29,6 +31,7 @@ partial class Alter
 			return Path.Combine(root, "settings.json");
 		}
 	}
+	
 	Color AccentColor
 	{
 		get
@@ -36,6 +39,7 @@ partial class Alter
 			return prefs.Accent == "Ocean" ? Color.FromRgb(40, 125, 231) : prefs.Accent == "Rose" ? Color.FromRgb(220, 72, 135) : Color.FromRgb(88, 29, 156);
 		}
 	}
+	
 	string AccentHex
 	{
 		get
@@ -43,6 +47,7 @@ partial class Alter
 			return prefs.Accent == "Ocean" ? "#287DE7" : prefs.Accent == "Rose" ? "#DC4887" : "#581D9C";
 		}
 	}
+	
 	string AccentSoftHex
 	{
 		get
@@ -50,13 +55,14 @@ partial class Alter
 			return prefs.Accent == "Ocean" ? "#91BDF6" : prefs.Accent == "Rose" ? "#F0A1C4" : "#AD77DC";
 		}
 	}
+	
 	void LoadPreferences()
 	{
 		try
 		{
 			if (File.Exists(PreferencePath))
 			{
-				var loaded = new JavaScriptSerializer().Deserialize<AlterPreferences>(File.ReadAllText(PreferencePath));
+				var loaded = JsonSerializer.Deserialize<AlterPreferences>(File.ReadAllText(PreferencePath));
 				if (loaded != null)
 					prefs = loaded;
 			}
@@ -73,10 +79,12 @@ partial class Alter
 		}
 		ApplyDensity();
 	}
+	
 	void SavePreferences()
 	{
-		File.WriteAllText(PreferencePath, new JavaScriptSerializer().Serialize(prefs));
+		File.WriteAllText(PreferencePath, JsonSerializer.Serialize(prefs));
 	}
+	
 	void SaveWindowPreference()
 	{
 		if (!prefs.RememberWindowSize)
@@ -86,6 +94,7 @@ partial class Alter
 		prefs.WindowHeight = bounds.Height;
 		SavePreferences();
 	}
+	
 	void ApplyDensity()
 	{
 		foreach (var b in navButtons.Values)
@@ -94,10 +103,12 @@ partial class Alter
 			b.Margin = new Thickness(16, prefs.CompactLayout ? 2 : 4, 16, prefs.CompactLayout ? 2 : 4);
 		}
 	}
+	
 	bool AllowWrite(string feature)
 	{
 		return !prefs.ConfirmWrites || MessageBox.Show("Write to the running game's memory for " + feature + "?", "Alter", MessageBoxButton.YesNo, MessageBoxImage.Question) == MessageBoxResult.Yes;
 	}
+	
 	UIElement SettingRow(string title, string detail, bool value, Action<bool> set)
 	{
 		var row = new Grid { MinHeight = 72, Margin = new Thickness(0, 2, 0, 2) };
@@ -115,6 +126,7 @@ partial class Alter
 		button.Click += (s, e) => { value = !value; set(value); SavePreferences(); button.Content = value ? "On" : "Off"; button.Background = Brush(value ? AccentHex : "#262036"); button.BorderBrush = Brush(value ? AccentHex : "#3A304E"); if (title == "Compact layout") ApplyDensity(); };
 		return row;
 	}
+	
 	void Settings()
 	{
 		SelectNav("settings");

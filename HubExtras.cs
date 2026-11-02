@@ -8,19 +8,20 @@ using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
+using System.Text.Json;
 
 class AlterExtension
 {
-	public string id, name, description, author, url;
+	public string id { get; set; }
+	public string name { get; set; }
+	public string description { get; set; }
+	public string author { get; set; }
+	public string url { get; set; }
 }
 
 partial class Alter
 {
 	const string DiscordInvite = "https://discord.gg/67tA9G8sBK";
-	JavaScriptSerializer ProfileJson()
-	{
-		return new JavaScriptSerializer { MaxJsonLength = 16 * 1024 * 1024, RecursionLimit = 100 };
-	}
 	void OpenUrl(string url)
 	{
 		try
@@ -29,10 +30,12 @@ partial class Alter
 		}
 		catch (Exception ex) { MessageBox.Show(ex.Message, "Alter"); }
 	}
+	
 	void OpenDiscord()
 	{
 		OpenUrl(DiscordInvite);
 	}
+	
 	ImageSource ArtworkSource(string encoded)
 	{
 		if (String.IsNullOrWhiteSpace(encoded))
@@ -53,6 +56,7 @@ partial class Alter
 		}
 		catch { return null; }
 	}
+	
 	Border ArtworkPreview(string encoded, double width, double height)
 	{
 		var source = ArtworkSource(encoded);
@@ -66,6 +70,7 @@ partial class Alter
 		}
 		return cover;
 	}
+	
 	void ApplyBanner(Grid grid, Profile profile)
 	{
 		var source = ArtworkSource(profile.bannerImage);
@@ -80,6 +85,7 @@ partial class Alter
 		shade.GradientStops.Add(new GradientStop(Color.FromArgb(65, 11, 8, 27), 1));
 		grid.Children.Add(new Border { Background = shade });
 	}
+
 	void ChooseArtwork(bool banner)
 	{
 		if (selected == null)
@@ -104,6 +110,7 @@ partial class Alter
 		}
 		catch (Exception ex) { MessageBox.Show(ex.Message, "Artwork"); }
 	}
+
 	void ArtworkEditor()
 	{
 		if (selected == null)
@@ -131,6 +138,7 @@ partial class Alter
 		panel.Children.Add(Button("Done", () => { w.Close(); Trainer(); }, false));
 		w.ShowDialog();
 	}
+
 	void OpenProfile(Profile profile)
 	{
 		selected = profile;
@@ -140,6 +148,7 @@ partial class Alter
 		File.WriteAllLines(Path.Combine(root, "recent.txt"), ids.Take(8));
 		Trainer();
 	}
+
 	List<string> RecentProfiles()
 	{
 		var path = Path.Combine(root, "recent.txt");
@@ -153,6 +162,7 @@ partial class Alter
 		}
 		return ids;
 	}
+
 	void FillRecent(Grid host)
 	{
 		var entries = RecentProfiles().Select(id => profiles.FirstOrDefault(p => p.id == id)).Where(p => p != null).Take(4).ToList();
@@ -184,6 +194,7 @@ partial class Alter
 		}
 		host.Children.Add(row);
 	}
+
 	string ExtensionDir
 	{
 		get
@@ -191,6 +202,7 @@ partial class Alter
 			return Path.Combine(root, "extensions");
 		}
 	}
+
 	void ExtensionsPage()
 	{
 		SelectNav("extensions");
@@ -213,7 +225,7 @@ partial class Alter
 		{
 			try
 			{
-				var extension = ProfileJson().Deserialize<AlterExtension>(File.ReadAllText(file));
+				var extension = JsonSerializer.Deserialize<AlterExtension>(File.ReadAllText(file));
 				if (extension == null || String.IsNullOrWhiteSpace(extension.name))
 					continue;
 				var card = new StackPanel();
@@ -230,18 +242,21 @@ partial class Alter
 			catch { }
 		}
 	}
+
 	bool ExtensionUrl(string value)
 	{
 		Uri uri;
 		return Uri.TryCreate(value, UriKind.Absolute, out uri) && uri.Scheme == "https";
 	}
+
 	void SaveExtension(AlterExtension extension)
 	{
 		Directory.CreateDirectory(ExtensionDir);
 		if (String.IsNullOrWhiteSpace(extension.id))
 			extension.id = Guid.NewGuid().ToString("N");
-		File.WriteAllText(Path.Combine(ExtensionDir, extension.id + ".json"), ProfileJson().Serialize(extension));
+		File.WriteAllText(Path.Combine(ExtensionDir, extension.id + ".json"), JsonSerializer.Serialize(extension));
 	}
+
 	void ExtensionEditor(AlterExtension extension)
 	{
 		bool fresh = extension == null;
@@ -268,6 +283,7 @@ partial class Alter
 		p.Children.Add(Button("Save extension", () => { if (String.IsNullOrWhiteSpace(name.Text) || !ExtensionUrl(url.Text)) { MessageBox.Show("Enter a name and an HTTPS link.", "Alter"); return; } extension.name = name.Text.Trim(); extension.description = description.Text.Trim(); extension.author = author.Text.Trim(); extension.url = url.Text.Trim(); SaveExtension(extension); w.Close(); ExtensionsPage(); }, true));
 		w.ShowDialog();
 	}
+
 	void ImportExtension()
 	{
 		var d = new Microsoft.Win32.OpenFileDialog { Filter = "Alter extension JSON|*.json" };
@@ -275,7 +291,7 @@ partial class Alter
 			return;
 		try
 		{
-			var e = ProfileJson().Deserialize<AlterExtension>(File.ReadAllText(d.FileName));
+			var e = JsonSerializer.Deserialize<AlterExtension>(File.ReadAllText(d.FileName));
 			if (e == null || String.IsNullOrWhiteSpace(e.name) || !ExtensionUrl(e.url))
 				throw new FormatException("Extension needs a name and HTTPS link.");
 			e.id = Guid.NewGuid().ToString("N");
@@ -284,6 +300,7 @@ partial class Alter
 		}
 		catch (Exception ex) { MessageBox.Show(ex.Message, "Import extension"); }
 	}
+	
 	void CommunityPage()
 	{
 		CommunityHubPage();
