@@ -5,3 +5,4 @@ using System.Reflection;
 [assembly: AssemblyVersion("0.2.0.0")]
 [assembly: AssemblyFileVersion("0.2.0.0")]
 [assembly: AssemblyInformationalVersion("v0.2.0")]
+[assembly: System.Runtime.Versioning.SupportedOSPlatform("windows")]
