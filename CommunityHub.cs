@@ -2,10 +2,11 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Net;
+using System.Net.Http;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.RegularExpressions;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
@@ -603,28 +604,47 @@ partial class Alter
 		Uri uri;
 		return Uri.TryCreate(link, UriKind.Absolute, out uri) && uri.Scheme == "https" && uri.Host.Equals("github.com", StringComparison.OrdinalIgnoreCase);
 	}
+	// Shared client; per-request timeouts come from FetchBytes' cancellation token
+	/*
+	  TODO: review the User-Agent strings ("Alter Community/0.1" here and the Alter/0.4" in Design.cs).
+	  Neither matches the app version; make them into variables if possible.
+	*/
+	static readonly HttpClient Http = new HttpClient { Timeout = Timeout.InfiniteTimeSpan };
+	static byte[] FetchBytes(Uri uri, string userAgent, string accept, int timeout, int maximum, string tooLarge)
+	{
+		using (var cancel = new CancellationTokenSource(timeout))
+		using (var request = new HttpRequestMessage(HttpMethod.Get, uri))
+		{
+			request.Headers.TryAddWithoutValidation("User-Agent", userAgent);
+			if (accept != null)
+				request.Headers.TryAddWithoutValidation("Accept", accept);
+			using (var response = Http.Send(request, HttpCompletionOption.ResponseHeadersRead, cancel.Token))
+			/* 
+				Disposing the response aborts a stalled read once the timeout fires.
+				Without this, a server that stalls mid-body would hang stream.Read forever
+			*/
+			using (cancel.Token.Register(response.Dispose))
+			{
+				response.EnsureSuccessStatusCode();
+				using (var stream = response.Content.ReadAsStream(cancel.Token))
+				using (var memory = new MemoryStream())
+				{
+					var buffer = new byte[8192];
+					int read;
+					while ((read = stream.Read(buffer, 0, buffer.Length)) > 0)
+					{
+						if (memory.Length + read > maximum)
+							throw new InvalidDataException(tooLarge);
+						memory.Write(buffer, 0, read);
+					}
+					return memory.ToArray();
+				}
+			}
+		}
+	}
 	string FetchCommunityText(string url, int maximum)
 	{
-		ServicePointManager.SecurityProtocol = SecurityProtocolType.Tls12;
-		var request = (HttpWebRequest)WebRequest.Create(url);
-		request.UserAgent = "Alter Community/0.1";
-		request.Accept = "application/vnd.github+json";
-		request.Timeout = 8000;
-		request.ReadWriteTimeout = 8000;
-		using (var response = (HttpWebResponse)request.GetResponse())
-		using (var stream = response.GetResponseStream())
-		using (var memory = new MemoryStream())
-		{
-			var buffer = new byte[8192];
-			int read;
-			while ((read = stream.Read(buffer, 0, buffer.Length)) > 0)
-			{
-				if (memory.Length + read > maximum)
-					throw new InvalidDataException("Community response is too large.");
-				memory.Write(buffer, 0, read);
-			}
-			return Encoding.UTF8.GetString(memory.ToArray());
-		}
+		return Encoding.UTF8.GetString(FetchBytes(new Uri(url), "Alter Community/0.1", "application/vnd.github+json", 8000, maximum, "Community response is too large."));
 	}
 	async void OpenCommunityEntry(CommunityTrainer entry)
 	{
@@ -644,7 +664,7 @@ partial class Alter
 			return;
 		try
 		{
-			var bytes = await Task.Run(() => { var request = (HttpWebRequest)WebRequest.Create(uri); request.UserAgent = "Alter Community/0.1"; request.Timeout = 10000; request.ReadWriteTimeout = 10000; using (var response = request.GetResponse()) using (var stream = response.GetResponseStream()) using (var memory = new MemoryStream()) { var buffer = new byte[8192]; int read; while ((read = stream.Read(buffer, 0, buffer.Length)) > 0) { if (memory.Length + read > 4 * 1024 * 1024) throw new InvalidDataException("Trainer profile exceeds 4 MB."); memory.Write(buffer, 0, read); } return memory.ToArray(); } });
+			var bytes = await Task.Run(() => FetchBytes(uri, "Alter Community/0.1", null, 10000, 4 * 1024 * 1024, "Trainer profile exceeds 4 MB."));
 			string hash;
 			using (var sha = SHA256.Create())
 				hash = BitConverter.ToString(sha.ComputeHash(bytes)).Replace("-", "");

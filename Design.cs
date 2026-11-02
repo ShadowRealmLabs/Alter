@@ -1,7 +1,8 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Net;
+using System.Text;
+using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
@@ -213,43 +214,39 @@ partial class Alter
 	{
 		try
 		{
-			ServicePointManager.SecurityProtocol = SecurityProtocolType.Tls12;
-			using (var client = new WebClient())
+			var bytes = await Task.Run(() => FetchBytes(new Uri("https://www.pcgamer.com/rss/"), "Alter/0.4", null, 10000, 4 * 1024 * 1024, "News feed is too large."));
+			string xml = Encoding.UTF8.GetString(bytes);
+			var allItems = XDocument.Parse(xml).Descendants("item").Take(50).Select(item => new { Title = (string)item.Element("title"), Url = (string)item.Element("link") }).Where(item => !String.IsNullOrWhiteSpace(item.Title) && !String.IsNullOrWhiteSpace(item.Url)).ToList();
+			var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+			var diverse = new List<Tuple<string, string>>();
+			foreach (var item in allItems)
 			{
-				client.Headers["User-Agent"] = "Alter/0.4";
-				string xml = await client.DownloadStringTaskAsync("https://www.pcgamer.com/rss/");
-				var allItems = XDocument.Parse(xml).Descendants("item").Take(50).Select(item => new { Title = (string)item.Element("title"), Url = (string)item.Element("link") }).Where(item => !String.IsNullOrWhiteSpace(item.Title) && !String.IsNullOrWhiteSpace(item.Url)).ToList();
-				var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-				var diverse = new List<Tuple<string, string>>();
-				foreach (var item in allItems)
-				{
-					Uri uri;
-					if (!Uri.TryCreate(item.Url, UriKind.Absolute, out uri) || uri.Scheme != "https")
-						continue;
-					var parts = uri.AbsolutePath.Trim('/').Split('/');
-					string topic = parts.Length > 1 && parts[0] == "games" ? parts[1] : parts[0];
-					if (!seen.Add(topic))
-						continue;
-					diverse.Add(Tuple.Create(item.Title, item.Url));
-					if (diverse.Count == 5)
-						break;
-				}
-				target.Children.Clear();
-				foreach (var item in diverse)
-				{
-					string url = item.Item2;
-					var b = Button(item.Item1, () => OpenUrl(url), false);
-					b.Content = Copy(item.Item1, 12, "#C8BBD9");
-					b.Height = Double.NaN;
-					b.Margin = new Thickness(0, 0, 0, 12);
-					b.Padding = new Thickness(0);
-					b.Background = Brush("#0E0C20");
-					b.BorderBrush = Brush("#0E0C20");
-					target.Children.Add(b);
-				}
-				if (diverse.Count == 0)
-					target.Children.Add(Copy("No headlines available right now.", 12, "#A093B4"));
+				Uri uri;
+				if (!Uri.TryCreate(item.Url, UriKind.Absolute, out uri) || uri.Scheme != "https")
+					continue;
+				var parts = uri.AbsolutePath.Trim('/').Split('/');
+				string topic = parts.Length > 1 && parts[0] == "games" ? parts[1] : parts[0];
+				if (!seen.Add(topic))
+					continue;
+				diverse.Add(Tuple.Create(item.Title, item.Url));
+				if (diverse.Count == 5)
+					break;
 			}
+			target.Children.Clear();
+			foreach (var item in diverse)
+			{
+				string url = item.Item2;
+				var b = Button(item.Item1, () => OpenUrl(url), false);
+				b.Content = Copy(item.Item1, 12, "#C8BBD9");
+				b.Height = Double.NaN;
+				b.Margin = new Thickness(0, 0, 0, 12);
+				b.Padding = new Thickness(0);
+				b.Background = Brush("#0E0C20");
+				b.BorderBrush = Brush("#0E0C20");
+				target.Children.Add(b);
+			}
+			if (diverse.Count == 0)
+				target.Children.Add(Copy("No headlines available right now.", 12, "#A093B4"));
 		}
 		catch { target.Children.Clear(); target.Children.Add(Copy("Headlines are unavailable right now.", 12, "#A093B4")); }
 		var all = Button("Read all gaming news  ↗", () => OpenUrl("https://www.pcgamer.com/news/"), false);
