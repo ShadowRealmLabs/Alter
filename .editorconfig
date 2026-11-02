@@ -1,0 +1,16 @@
+root = true
+
+[*.cs]
+indent_style = tab
+
+# Put every statement and every block on its own lines
+csharp_preserve_single_line_statements = false
+csharp_preserve_single_line_blocks = false
+
+# Allman braces everywhere
+csharp_new_line_before_open_brace = all
+csharp_new_line_before_else = true
+csharp_new_line_before_catch = true
+csharp_new_line_before_finally = true
+csharp_new_line_before_members_in_object_initializers = true
+csharp_new_line_before_members_in_anonymous_types = true
