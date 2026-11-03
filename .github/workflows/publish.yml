@@ -1,0 +1,73 @@
+name: Publish
+
+# Manual only: start it from the Actions tab ("Run workflow").
+# It builds the zips, then tags the commit with the csproj version and creates a GitHub Release.
+on:
+  workflow_dispatch:
+    inputs:
+      release:
+        description: 'Create a GitHub Release (uncheck to only build the zips)'
+        type: boolean
+        default: true
+
+permissions:
+  contents: write   # needed to create the GitHub Release
+
+jobs:
+  publish:
+    runs-on: windows-latest
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+
+    strategy:
+      matrix:
+        include:
+          # Self-contained: runs without .NET installed (bigger download)
+          - flavor: self-contained
+            args: --self-contained true -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true
+          # Framework-dependent: needs the .NET 10 Desktop Runtime (small download)
+          - flavor: framework-dependent
+            args: --self-contained false
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Read version from csproj
+        id: version
+        shell: pwsh
+        run: |
+          $v = ([xml](Get-Content Alter.csproj)).Project.PropertyGroup.InformationalVersion | Where-Object { $_ } | Select-Object -First 1
+          "version=$v" >> $env:GITHUB_OUTPUT
+
+      - name: Publish
+        run: dotnet publish Alter.csproj -c Release -r win-x64 ${{ matrix.args }} -o out
+
+      - name: Zip
+        shell: pwsh
+        run: Compress-Archive -Path out\* -DestinationPath "Alter-${{ steps.version.outputs.version }}-win-x64-${{ matrix.flavor }}.zip"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Alter-${{ steps.version.outputs.version }}-win-x64-${{ matrix.flavor }}
+          path: Alter-*.zip
+
+  release:
+    needs: publish
+    if: inputs.release
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: dist
+          merge-multiple: true
+
+      - uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ needs.publish.outputs.version }}
+          target_commitish: ${{ github.sha }}
+          files: dist/*.zip
+          generate_release_notes: true
