@@ -22,7 +22,7 @@ class AlterExtension
 partial class Alter
 {
 	const string DiscordInvite = "https://discord.gg/67tA9G8sBK";
-	
+
 	void OpenUrl(string url)
 	{
 		try
