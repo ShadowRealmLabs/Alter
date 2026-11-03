@@ -151,18 +151,18 @@ partial class Alter : Window
 	{
 		ExtensionsPage();
 	}
-	
+
 	void Community()
 	{
 		CommunityPage();
 	}
-	
+
 	void Library()
 	{
 		LibraryPage();
 	}
-	
-	
+
+
 	[STAThread]
 	static void Main()
 	{

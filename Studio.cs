@@ -13,7 +13,7 @@ using System.Text.Json;
 partial class Alter
 {
 	MemorySession session; string sessionProfile; DispatcherTimer freezeTimer;
-	
+
 	void StyleDialog(Window w)
 	{
 		var textStyle = new Style(typeof(TextBox));
@@ -29,13 +29,13 @@ partial class Alter
 		buttonStyle.Setters.Add(new Setter(System.Windows.Controls.Button.BorderBrushProperty, Brush("#4D3473")));
 		w.Resources[typeof(Button)] = buttonStyle;
 	}
-	
+
 	void SaveProfile(Profile profile)
 	{
 		Directory.CreateDirectory(Path.Combine(root, "profiles"));
 		File.WriteAllText(Path.Combine(root, "profiles", profile.id + ".json"), JsonSerializer.Serialize(profile));
 	}
-	
+
 	void EnsureSession()
 	{
 		if (selected == null)
@@ -43,7 +43,7 @@ partial class Alter
 		if (session == null || !session.Connected || sessionProfile != selected.id)
 			throw new InvalidOperationException("Connect to the game first.");
 	}
-	
+
 	void Connect()
 	{
 		try
@@ -63,7 +63,7 @@ partial class Alter
 		}
 		catch (Exception ex) { MessageBox.Show(ex.Message, "Alter connection"); }
 	}
-	
+
 	void Trainer()
 	{
 		if (activeFeatures.Count > 0 && (selected == null || activeFeatureProfile != selected.id))
@@ -198,7 +198,7 @@ partial class Alter
 		edit.Children.Add(Button("Export profile", () => ExportProfile(), false));
 		right.Children.Add(Surface(edit, new Thickness(17)));
 	}
-	
+
 	void ValueEditor(Feature existing)
 	{
 		if (selected == null)
@@ -254,7 +254,7 @@ partial class Alter
 		p.Children.Add(actions);
 		w.ShowDialog();
 	}
-	
+
 	void ExportProfile()
 	{
 		if (selected == null)
@@ -263,7 +263,7 @@ partial class Alter
 		if (d.ShowDialog() == true)
 			File.WriteAllText(d.FileName, JsonSerializer.Serialize(selected));
 	}
-	
+
 	void EditProcess()
 	{
 		if (selected == null)
@@ -279,7 +279,7 @@ partial class Alter
 		p.Children.Add(Button("Save process", () => { if (String.IsNullOrWhiteSpace(input.Text)) return; if (session != null) { session.Dispose(); session = null; } selected.process = Path.GetFileName(input.Text.Trim()); SaveProfile(selected); w.Close(); Trainer(); }, true));
 		w.ShowDialog();
 	}
-	
+
 	void RemoveProfile(Profile profile)
 	{
 		if (prefs.ConfirmRemovals && MessageBox.Show("Remove " + profile.name + " from this local library?", "Alter", MessageBoxButton.YesNo) != MessageBoxResult.Yes)
@@ -297,7 +297,7 @@ partial class Alter
 		Load();
 		Library();
 	}
-	
+
 	void Create()
 	{
 		var w = new Window { Title = "Create local trainer", Width = 420, Height = 300, Owner = this, WindowStartupLocation = WindowStartupLocation.CenterOwner, Background = Brush("#0B0A1B"), Foreground = Ink };
@@ -315,7 +315,7 @@ partial class Alter
 		p.Children.Add(b);
 		w.ShowDialog();
 	}
-	
+
 	void Import()
 	{
 		var d = new Microsoft.Win32.OpenFileDialog { Filter = "Trainer files|*.json;*.ct;*.exe|Alter profile|*.json|Cheat Engine table|*.ct|FLiNG trainer EXE|*.exe" };
@@ -355,7 +355,7 @@ partial class Alter
 		}
 		catch (Exception ex) { MessageBox.Show(ex.Message, "Import failed"); }
 	}
-	
+
 	Profile ImportTable(string path)
 	{
 		var settings = new XmlReaderSettings { DtdProcessing = DtdProcessing.Prohibit, XmlResolver = null };

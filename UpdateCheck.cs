@@ -122,7 +122,7 @@ partial class Alter
 		Uri uri;
 		return Uri.TryCreate(url, UriKind.Absolute, out uri) && uri.Scheme == "https" && uri.Host.Equals("github.com", StringComparison.OrdinalIgnoreCase) && uri.AbsolutePath.StartsWith("/an1dxsh/Alter/releases/tag/", StringComparison.OrdinalIgnoreCase);
 	}
-	
+
 	string[] ParseReleaseVersion(string tag)
 	{
 		var match = Regex.Match(tag ?? "", @"^v?(\d+)\.(\d+)\.(\d+)(?:-([0-9A-Za-z.-]+))?$", RegexOptions.IgnoreCase);
@@ -133,7 +133,7 @@ partial class Alter
 			return null;
 		return new[] { major.ToString(), minor.ToString(), patch.ToString(), match.Groups[4].Value };
 	}
-	
+
 	int CompareReleaseVersions(string left, string right)
 	{
 		var a = ParseReleaseVersion(left);

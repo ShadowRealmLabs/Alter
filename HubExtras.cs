@@ -22,6 +22,7 @@ class AlterExtension
 partial class Alter
 {
 	const string DiscordInvite = "https://discord.gg/67tA9G8sBK";
+	
 	void OpenUrl(string url)
 	{
 		try
@@ -30,12 +31,12 @@ partial class Alter
 		}
 		catch (Exception ex) { MessageBox.Show(ex.Message, "Alter"); }
 	}
-	
+
 	void OpenDiscord()
 	{
 		OpenUrl(DiscordInvite);
 	}
-	
+
 	ImageSource ArtworkSource(string encoded)
 	{
 		if (String.IsNullOrWhiteSpace(encoded))
@@ -56,7 +57,7 @@ partial class Alter
 		}
 		catch { return null; }
 	}
-	
+
 	Border ArtworkPreview(string encoded, double width, double height)
 	{
 		var source = ArtworkSource(encoded);
@@ -70,7 +71,7 @@ partial class Alter
 		}
 		return cover;
 	}
-	
+
 	void ApplyBanner(Grid grid, Profile profile)
 	{
 		var source = ArtworkSource(profile.bannerImage);
@@ -300,7 +301,7 @@ partial class Alter
 		}
 		catch (Exception ex) { MessageBox.Show(ex.Message, "Import extension"); }
 	}
-	
+
 	void CommunityPage()
 	{
 		CommunityHubPage();

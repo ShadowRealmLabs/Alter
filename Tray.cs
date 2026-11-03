@@ -33,7 +33,7 @@ partial class Alter
 		ShowInTaskbar = false;
 		Hide();
 	}
-	
+
 	void RestoreFromTray()
 	{
 		if (trayIcon == null)
@@ -44,7 +44,7 @@ partial class Alter
 		Activate();
 		trayIcon.Visible = false;
 	}
-	
+
 	void ExitFromTray()
 	{
 		exitRequested = true;

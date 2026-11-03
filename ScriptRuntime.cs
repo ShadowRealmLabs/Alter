@@ -137,11 +137,11 @@ public sealed class TrainerApi
 		}
 		System.Diagnostics.ProcessModule module = null;
 		foreach (System.Diagnostics.ProcessModule m in memory.Process.Modules)
-		if (String.Equals(m.ModuleName, moduleName, StringComparison.OrdinalIgnoreCase))
-		{
-			module = m;
-			break;
-		}
+			if (String.Equals(m.ModuleName, moduleName, StringComparison.OrdinalIgnoreCase))
+			{
+				module = m;
+				break;
+			}
 		if (module == null)
 			throw new InvalidOperationException("Module not found: " + moduleName);
 		long start = module.BaseAddress.ToInt64(), size = Math.Min((long)module.ModuleMemorySize, 256L * 1024 * 1024);
@@ -160,11 +160,11 @@ public sealed class TrainerApi
 			{
 				bool hit = true;
 				for (int i = 0; i < bytes.Length; i++)
-				if (mask[i] && block[at + i] != bytes[i])
-				{
-					hit = false;
-					break;
-				}
+					if (mask[i] && block[at + i] != bytes[i])
+					{
+						hit = false;
+						break;
+					}
 				if (hit)
 					return start + offset + at;
 			}

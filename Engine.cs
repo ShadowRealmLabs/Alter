@@ -67,8 +67,8 @@ sealed class MemorySession : IDisposable
 			string module = s.Substring(0, plus).Trim();
 			long offset = ParseNumber(s.Substring(plus + 1));
 			foreach (ProcessModule m in Process.Modules)
-			if (String.Equals(m.ModuleName, module, StringComparison.OrdinalIgnoreCase))
-				return checked(m.BaseAddress.ToInt64() + offset);
+				if (String.Equals(m.ModuleName, module, StringComparison.OrdinalIgnoreCase))
+					return checked(m.BaseAddress.ToInt64() + offset);
 			throw new InvalidOperationException("Module not found: " + module);
 		}
 		return ParseNumber(s);
@@ -171,11 +171,11 @@ sealed class MemorySession : IDisposable
 						{
 							bool match = true;
 							for (int j = 0; j < pattern.Length; j++)
-							if (block[i + j] != pattern[j])
-							{
-								match = false;
-								break;
-							}
+								if (block[i + j] != pattern[j])
+								{
+									match = false;
+									break;
+								}
 							if (match)
 							{
 								hits.Add(at + i);
@@ -202,11 +202,11 @@ sealed class MemorySession : IDisposable
 				byte[] found = ReadBytes(address, pattern.Length);
 				bool match = true;
 				for (int i = 0; i < pattern.Length; i++)
-				if (found[i] != pattern[i])
-				{
-					match = false;
-					break;
-				}
+					if (found[i] != pattern[i])
+					{
+						match = false;
+						break;
+					}
 				if (match)
 					next.Add(address);
 			}

@@ -23,7 +23,7 @@ class AlterPreferences
 partial class Alter
 {
 	AlterPreferences prefs = new AlterPreferences();
-	
+
 	string PreferencePath
 	{
 		get
@@ -31,7 +31,7 @@ partial class Alter
 			return Path.Combine(root, "settings.json");
 		}
 	}
-	
+
 	Color AccentColor
 	{
 		get
@@ -39,7 +39,7 @@ partial class Alter
 			return prefs.Accent == "Ocean" ? Color.FromRgb(40, 125, 231) : prefs.Accent == "Rose" ? Color.FromRgb(220, 72, 135) : Color.FromRgb(88, 29, 156);
 		}
 	}
-	
+
 	string AccentHex
 	{
 		get
@@ -47,7 +47,7 @@ partial class Alter
 			return prefs.Accent == "Ocean" ? "#287DE7" : prefs.Accent == "Rose" ? "#DC4887" : "#581D9C";
 		}
 	}
-	
+
 	string AccentSoftHex
 	{
 		get
@@ -55,7 +55,7 @@ partial class Alter
 			return prefs.Accent == "Ocean" ? "#91BDF6" : prefs.Accent == "Rose" ? "#F0A1C4" : "#AD77DC";
 		}
 	}
-	
+
 	void LoadPreferences()
 	{
 		try
@@ -79,12 +79,12 @@ partial class Alter
 		}
 		ApplyDensity();
 	}
-	
+
 	void SavePreferences()
 	{
 		File.WriteAllText(PreferencePath, JsonSerializer.Serialize(prefs));
 	}
-	
+
 	void SaveWindowPreference()
 	{
 		if (!prefs.RememberWindowSize)
@@ -94,7 +94,7 @@ partial class Alter
 		prefs.WindowHeight = bounds.Height;
 		SavePreferences();
 	}
-	
+
 	void ApplyDensity()
 	{
 		foreach (var b in navButtons.Values)
@@ -103,12 +103,12 @@ partial class Alter
 			b.Margin = new Thickness(16, prefs.CompactLayout ? 2 : 4, 16, prefs.CompactLayout ? 2 : 4);
 		}
 	}
-	
+
 	bool AllowWrite(string feature)
 	{
 		return !prefs.ConfirmWrites || MessageBox.Show("Write to the running game's memory for " + feature + "?", "Alter", MessageBoxButton.YesNo, MessageBoxImage.Question) == MessageBoxResult.Yes;
 	}
-	
+
 	UIElement SettingRow(string title, string detail, bool value, Action<bool> set)
 	{
 		var row = new Grid { MinHeight = 72, Margin = new Thickness(0, 2, 0, 2) };
@@ -126,7 +126,7 @@ partial class Alter
 		button.Click += (s, e) => { value = !value; set(value); SavePreferences(); button.Content = value ? "On" : "Off"; button.Background = Brush(value ? AccentHex : "#262036"); button.BorderBrush = Brush(value ? AccentHex : "#3A304E"); if (title == "Compact layout") ApplyDensity(); };
 		return row;
 	}
-	
+
 	void Settings()
 	{
 		SelectNav("settings");
