@@ -3,33 +3,307 @@ using System.IO;
 using System.Linq;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.Web.Script.Serialization;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
+using System.Text.Json;
 
-class AlterExtension { public string id,name,description,author,url; }
+class AlterExtension
+{
+	public string id { get; set; }
+	public string name { get; set; }
+	public string description { get; set; }
+	public string author { get; set; }
+	public string url { get; set; }
+}
 
-partial class Alter {
- const string DiscordInvite="https://discord.gg/67tA9G8sBK";
- JavaScriptSerializer ProfileJson(){return new JavaScriptSerializer{MaxJsonLength=16*1024*1024,RecursionLimit=100};}
- void OpenUrl(string url){try{Process.Start(new ProcessStartInfo(url){UseShellExecute=true});}catch(Exception ex){MessageBox.Show(ex.Message,"Alter");}}
- void OpenDiscord(){OpenUrl(DiscordInvite);}
- ImageSource ArtworkSource(string encoded){if(String.IsNullOrWhiteSpace(encoded))return null;try{byte[] data=Convert.FromBase64String(encoded);using(var stream=new MemoryStream(data)){var bitmap=new BitmapImage();bitmap.BeginInit();bitmap.CacheOption=BitmapCacheOption.OnLoad;bitmap.StreamSource=stream;bitmap.EndInit();bitmap.Freeze();return bitmap;}}catch{return null;}}
- Border ArtworkPreview(string encoded,double width,double height){var source=ArtworkSource(encoded);var background=source==null?(Brush)new SolidColorBrush(Color.FromArgb(25,141,99,181)):new ImageBrush(source){Stretch=Stretch.UniformToFill};var cover=new Border{Width=width,Height=height,Background=background,BorderBrush=new SolidColorBrush(Color.FromArgb(75,159,124,201)),BorderThickness=new Thickness(1),CornerRadius=new CornerRadius(13)};if(source==null){var glyph=Glyph("library",Math.Min(25,width*.34),"#9B7BBF");glyph.Opacity=.6;cover.Child=glyph;}return cover;}
- void ApplyBanner(Grid grid,Profile profile){var source=ArtworkSource(profile.bannerImage);if(source==null)return;grid.Background=new ImageBrush(source){Stretch=Stretch.UniformToFill,AlignmentY=AlignmentY.Center};var shade=new LinearGradientBrush();shade.StartPoint=new Point(0,0);shade.EndPoint=new Point(1,0);shade.GradientStops.Add(new GradientStop(Color.FromArgb(245,11,8,27),0));shade.GradientStops.Add(new GradientStop(Color.FromArgb(190,11,8,27),.50));shade.GradientStops.Add(new GradientStop(Color.FromArgb(65,11,8,27),1));grid.Children.Add(new Border{Background=shade});}
- void ChooseArtwork(bool banner){if(selected==null)return;var dialog=new Microsoft.Win32.OpenFileDialog{Filter="Image files|*.png;*.jpg;*.jpeg;*.bmp|PNG|*.png|JPEG|*.jpg;*.jpeg|Bitmap|*.bmp"};if(dialog.ShowDialog()!=true)return;try{var info=new FileInfo(dialog.FileName);if(info.Length>3*1024*1024)throw new InvalidOperationException("Choose an image smaller than 3 MB so the trainer stays easy to share.");var data=Convert.ToBase64String(File.ReadAllBytes(dialog.FileName));if(ArtworkSource(data)==null)throw new InvalidOperationException("This image could not be opened. Choose a PNG, JPEG or BMP.");if(banner)selected.bannerImage=data;else selected.coverImage=data;SaveProfile(selected);ArtworkEditor();}catch(Exception ex){MessageBox.Show(ex.Message,"Artwork");}}
- void ArtworkEditor(){if(selected==null)return;var w=new Window{Title="Trainer artwork · Alter",Width=520,Height=480,Owner=this,WindowStartupLocation=WindowStartupLocation.CenterOwner,Background=Brush("#0B0A1B"),Foreground=Ink};StyleDialog(w);var scroll=new ScrollViewer();w.Content=scroll;var panel=new StackPanel{Margin=new Thickness(24)};scroll.Content=panel;panel.Children.Add(Copy("CUSTOMIZE ARTWORK",12,AccentSoftHex));panel.Children.Add(Copy(selected.name,23,"#F3EAFF"));panel.Children.Add(Copy("Banner · wide image for the trainer page",12,"#A99AB9"));panel.Children.Add(ArtworkPreview(selected.bannerImage,455,105));var bannerButtons=new StackPanel{Orientation=Orientation.Horizontal};bannerButtons.Children.Add(Button("Choose banner",()=>{w.Close();ChooseArtwork(true);},true));bannerButtons.Children.Add(Button("Remove banner",()=>{selected.bannerImage=null;SaveProfile(selected);w.Close();ArtworkEditor();},false));panel.Children.Add(bannerButtons);panel.Children.Add(Copy("Cover · portrait art for Library and Recently Played",12,"#A99AB9"));panel.Children.Add(ArtworkPreview(selected.coverImage,95,120));var coverButtons=new StackPanel{Orientation=Orientation.Horizontal};coverButtons.Children.Add(Button("Choose cover",()=>{w.Close();ChooseArtwork(false);},true));coverButtons.Children.Add(Button("Remove cover",()=>{selected.coverImage=null;SaveProfile(selected);w.Close();ArtworkEditor();},false));panel.Children.Add(coverButtons);panel.Children.Add(Button("Done",()=>{w.Close();Trainer();},false));w.ShowDialog();}
- void OpenProfile(Profile profile){selected=profile;File.WriteAllText(Path.Combine(root,"last-used.txt"),profile.id+"|"+DateTime.UtcNow.ToString("o"));var ids=RecentProfiles().Where(id=>id!=profile.id).ToList();ids.Insert(0,profile.id);File.WriteAllLines(Path.Combine(root,"recent.txt"),ids.Take(8));Trainer();}
- List<string> RecentProfiles(){var path=Path.Combine(root,"recent.txt");var ids=File.Exists(path)?File.ReadAllLines(path).Where(x=>!String.IsNullOrWhiteSpace(x)).ToList():new List<string>();var old=Path.Combine(root,"last-used.txt");if(File.Exists(old)){var id=File.ReadAllText(old).Split('|')[0];if(!String.IsNullOrWhiteSpace(id)&&!ids.Contains(id))ids.Insert(0,id);}return ids;}
- void FillRecent(Grid host){var entries=RecentProfiles().Select(id=>profiles.FirstOrDefault(p=>p.id==id)).Where(p=>p!=null).Take(4).ToList();if(entries.Count==0)return;host.Children.Clear();var row=new UniformGrid{Columns=4,Margin=new Thickness(16,13,16,13)};foreach(var profile in entries){var item=new StackPanel{Margin=new Thickness(5,0,5,0),VerticalAlignment=VerticalAlignment.Top};var cover=ArtworkPreview(profile.coverImage,105,112);cover.HorizontalAlignment=HorizontalAlignment.Left;item.Children.Add(cover);var title=Copy(profile.name,11,"#F0E9F8");title.TextTrimming=TextTrimming.CharacterEllipsis;title.Width=132;title.Height=37;title.Margin=new Thickness(0,6,0,0);item.Children.Add(title);var open=Button("Open  →",()=>OpenProfile(profile),false);open.Height=28;open.Width=78;open.Margin=new Thickness(0,4,0,0);open.MinWidth=0;open.Padding=new Thickness(8,0,8,0);open.HorizontalContentAlignment=HorizontalAlignment.Center;item.Children.Add(open);row.Children.Add(item);}host.Children.Add(row);}
- string ExtensionDir{get{return Path.Combine(root,"extensions");}}
- void ExtensionsPage(){SelectNav("extensions");body.Children.Clear();var sc=new ScrollViewer{VerticalScrollBarVisibility=ScrollBarVisibility.Auto};body.Children.Add(sc);var panel=new StackPanel{Margin=new Thickness(28)};sc.Content=panel;panel.Children.Add(Copy("Extensions",27,"#F2EAFB"));panel.Children.Add(Copy("Your local collection of community tools and resources.",13,"#A99AB9"));var actions=new StackPanel{Orientation=Orientation.Horizontal};actions.Children.Add(Button("＋ Add extension",()=>ImportExtension(),true));actions.Children.Add(Button("Create extension",()=>ExtensionEditor(null),false));panel.Children.Add(actions);Directory.CreateDirectory(ExtensionDir);var files=Directory.GetFiles(ExtensionDir,"*.json");if(files.Length==0)panel.Children.Add(Surface(new StackPanel{Children={Copy("No extensions added yet",18,"#E9DFF4"),Copy("Create a resource extension or import one from a local JSON file.",12,"#9689A8")}},new Thickness(22)));foreach(var file in files){try{var extension=ProfileJson().Deserialize<AlterExtension>(File.ReadAllText(file));if(extension==null||String.IsNullOrWhiteSpace(extension.name))continue;var card=new StackPanel();card.Children.Add(Copy(extension.name,17,"#F1E8FB"));card.Children.Add(Copy(extension.description??"",12,"#AA9DBB"));card.Children.Add(Copy(String.IsNullOrWhiteSpace(extension.author)?"Local extension":"By "+extension.author,10,AccentSoftHex));var buttons=new StackPanel{Orientation=Orientation.Horizontal};buttons.Children.Add(Button("Open link  ↗",()=>OpenUrl(extension.url),true));buttons.Children.Add(Button("Edit",()=>ExtensionEditor(extension),false));buttons.Children.Add(Button("Remove",()=>{if(MessageBox.Show("Remove "+extension.name+"?","Alter",MessageBoxButton.YesNo)==MessageBoxResult.Yes){File.Delete(file);ExtensionsPage();}},false));card.Children.Add(buttons);panel.Children.Add(Card(card));}catch{}}}
- bool ExtensionUrl(string value){Uri uri;return Uri.TryCreate(value,UriKind.Absolute,out uri)&&uri.Scheme=="https";}
- void SaveExtension(AlterExtension extension){Directory.CreateDirectory(ExtensionDir);if(String.IsNullOrWhiteSpace(extension.id))extension.id=Guid.NewGuid().ToString("N");File.WriteAllText(Path.Combine(ExtensionDir,extension.id+".json"),ProfileJson().Serialize(extension));}
- void ExtensionEditor(AlterExtension extension){bool fresh=extension==null;if(fresh)extension=new AlterExtension();var w=new Window{Title=fresh?"Create extension":"Edit extension",Width=480,Height=410,Owner=this,WindowStartupLocation=WindowStartupLocation.CenterOwner,Background=Brush("#0B0A1B"),Foreground=Ink};StyleDialog(w);var p=new StackPanel{Margin=new Thickness(23)};w.Content=p;p.Children.Add(Copy("RESOURCE EXTENSION",12,AccentSoftHex));p.Children.Add(Copy("Name",11,"#E5D9F1"));var name=new TextBox{Text=extension.name??""};p.Children.Add(name);p.Children.Add(Copy("Description",11,"#E5D9F1"));var description=new TextBox{Text=extension.description??""};p.Children.Add(description);p.Children.Add(Copy("Author",11,"#E5D9F1"));var author=new TextBox{Text=extension.author??""};p.Children.Add(author);p.Children.Add(Copy("HTTPS link",11,"#E5D9F1"));var url=new TextBox{Text=extension.url??""};p.Children.Add(url);p.Children.Add(Copy("Resource extensions open a link. Trainer profiles are created in Library.",11,"#9688AB"));p.Children.Add(Button("Save extension",()=>{if(String.IsNullOrWhiteSpace(name.Text)||!ExtensionUrl(url.Text)){MessageBox.Show("Enter a name and an HTTPS link.","Alter");return;}extension.name=name.Text.Trim();extension.description=description.Text.Trim();extension.author=author.Text.Trim();extension.url=url.Text.Trim();SaveExtension(extension);w.Close();ExtensionsPage();},true));w.ShowDialog();}
- void ImportExtension(){var d=new Microsoft.Win32.OpenFileDialog{Filter="Alter extension JSON|*.json"};if(d.ShowDialog()!=true)return;try{var e=ProfileJson().Deserialize<AlterExtension>(File.ReadAllText(d.FileName));if(e==null||String.IsNullOrWhiteSpace(e.name)||!ExtensionUrl(e.url))throw new FormatException("Extension needs a name and HTTPS link.");e.id=Guid.NewGuid().ToString("N");SaveExtension(e);ExtensionsPage();}catch(Exception ex){MessageBox.Show(ex.Message,"Import extension");}}
- void CommunityPage(){CommunityHubPage();}
+partial class Alter
+{
+	const string DiscordInvite = "https://discord.gg/67tA9G8sBK";
+
+	void OpenUrl(string url)
+	{
+		try
+		{
+			Process.Start(new ProcessStartInfo(url) { UseShellExecute = true });
+		}
+		catch (Exception ex) { MessageBox.Show(ex.Message, "Alter"); }
+	}
+
+	void OpenDiscord()
+	{
+		OpenUrl(DiscordInvite);
+	}
+
+	ImageSource ArtworkSource(string encoded)
+	{
+		if (String.IsNullOrWhiteSpace(encoded))
+			return null;
+		try
+		{
+			byte[] data = Convert.FromBase64String(encoded);
+			using (var stream = new MemoryStream(data))
+			{
+				var bitmap = new BitmapImage();
+				bitmap.BeginInit();
+				bitmap.CacheOption = BitmapCacheOption.OnLoad;
+				bitmap.StreamSource = stream;
+				bitmap.EndInit();
+				bitmap.Freeze();
+				return bitmap;
+			}
+		}
+		catch { return null; }
+	}
+
+	Border ArtworkPreview(string encoded, double width, double height)
+	{
+		var source = ArtworkSource(encoded);
+		var background = source == null ? (Brush)new SolidColorBrush(Color.FromArgb(25, 141, 99, 181)) : new ImageBrush(source) { Stretch = Stretch.UniformToFill };
+		var cover = new Border { Width = width, Height = height, Background = background, BorderBrush = new SolidColorBrush(Color.FromArgb(75, 159, 124, 201)), BorderThickness = new Thickness(1), CornerRadius = new CornerRadius(13) };
+		if (source == null)
+		{
+			var glyph = Glyph("library", Math.Min(25, width * .34), "#9B7BBF");
+			glyph.Opacity = .6;
+			cover.Child = glyph;
+		}
+		return cover;
+	}
+
+	void ApplyBanner(Grid grid, Profile profile)
+	{
+		var source = ArtworkSource(profile.bannerImage);
+		if (source == null)
+			return;
+		grid.Background = new ImageBrush(source) { Stretch = Stretch.UniformToFill, AlignmentY = AlignmentY.Center };
+		var shade = new LinearGradientBrush();
+		shade.StartPoint = new Point(0, 0);
+		shade.EndPoint = new Point(1, 0);
+		shade.GradientStops.Add(new GradientStop(Color.FromArgb(245, 11, 8, 27), 0));
+		shade.GradientStops.Add(new GradientStop(Color.FromArgb(190, 11, 8, 27), .50));
+		shade.GradientStops.Add(new GradientStop(Color.FromArgb(65, 11, 8, 27), 1));
+		grid.Children.Add(new Border { Background = shade });
+	}
+
+	void ChooseArtwork(bool banner)
+	{
+		if (selected == null)
+			return;
+		var dialog = new Microsoft.Win32.OpenFileDialog { Filter = "Image files|*.png;*.jpg;*.jpeg;*.bmp|PNG|*.png|JPEG|*.jpg;*.jpeg|Bitmap|*.bmp" };
+		if (dialog.ShowDialog() != true)
+			return;
+		try
+		{
+			var info = new FileInfo(dialog.FileName);
+			if (info.Length > 3 * 1024 * 1024)
+				throw new InvalidOperationException("Choose an image smaller than 3 MB so the trainer stays easy to share.");
+			var data = Convert.ToBase64String(File.ReadAllBytes(dialog.FileName));
+			if (ArtworkSource(data) == null)
+				throw new InvalidOperationException("This image could not be opened. Choose a PNG, JPEG or BMP.");
+			if (banner)
+				selected.bannerImage = data;
+			else
+				selected.coverImage = data;
+			SaveProfile(selected);
+			ArtworkEditor();
+		}
+		catch (Exception ex) { MessageBox.Show(ex.Message, "Artwork"); }
+	}
+
+	void ArtworkEditor()
+	{
+		if (selected == null)
+			return;
+		var w = new Window { Title = "Trainer artwork · Alter", Width = 520, Height = 480, Owner = this, WindowStartupLocation = WindowStartupLocation.CenterOwner, Background = Brush("#0B0A1B"), Foreground = Ink };
+		StyleDialog(w);
+		var scroll = new ScrollViewer();
+		w.Content = scroll;
+		var panel = new StackPanel { Margin = new Thickness(24) };
+		scroll.Content = panel;
+		panel.Children.Add(Copy("CUSTOMIZE ARTWORK", 12, AccentSoftHex));
+		panel.Children.Add(Copy(selected.name, 23, "#F3EAFF"));
+		panel.Children.Add(Copy("Banner · wide image for the trainer page", 12, "#A99AB9"));
+		panel.Children.Add(ArtworkPreview(selected.bannerImage, 455, 105));
+		var bannerButtons = new StackPanel { Orientation = Orientation.Horizontal };
+		bannerButtons.Children.Add(Button("Choose banner", () => { w.Close(); ChooseArtwork(true); }, true));
+		bannerButtons.Children.Add(Button("Remove banner", () => { selected.bannerImage = null; SaveProfile(selected); w.Close(); ArtworkEditor(); }, false));
+		panel.Children.Add(bannerButtons);
+		panel.Children.Add(Copy("Cover · portrait art for Library and Recently Played", 12, "#A99AB9"));
+		panel.Children.Add(ArtworkPreview(selected.coverImage, 95, 120));
+		var coverButtons = new StackPanel { Orientation = Orientation.Horizontal };
+		coverButtons.Children.Add(Button("Choose cover", () => { w.Close(); ChooseArtwork(false); }, true));
+		coverButtons.Children.Add(Button("Remove cover", () => { selected.coverImage = null; SaveProfile(selected); w.Close(); ArtworkEditor(); }, false));
+		panel.Children.Add(coverButtons);
+		panel.Children.Add(Button("Done", () => { w.Close(); Trainer(); }, false));
+		w.ShowDialog();
+	}
+
+	void OpenProfile(Profile profile)
+	{
+		selected = profile;
+		File.WriteAllText(Path.Combine(root, "last-used.txt"), profile.id + "|" + DateTime.UtcNow.ToString("o"));
+		var ids = RecentProfiles().Where(id => id != profile.id).ToList();
+		ids.Insert(0, profile.id);
+		File.WriteAllLines(Path.Combine(root, "recent.txt"), ids.Take(8));
+		Trainer();
+	}
+
+	List<string> RecentProfiles()
+	{
+		var path = Path.Combine(root, "recent.txt");
+		var ids = File.Exists(path) ? File.ReadAllLines(path).Where(x => !String.IsNullOrWhiteSpace(x)).ToList() : new List<string>();
+		var old = Path.Combine(root, "last-used.txt");
+		if (File.Exists(old))
+		{
+			var id = File.ReadAllText(old).Split('|')[0];
+			if (!String.IsNullOrWhiteSpace(id) && !ids.Contains(id))
+				ids.Insert(0, id);
+		}
+		return ids;
+	}
+
+	void FillRecent(Grid host)
+	{
+		var entries = RecentProfiles().Select(id => profiles.FirstOrDefault(p => p.id == id)).Where(p => p != null).Take(4).ToList();
+		if (entries.Count == 0)
+			return;
+		host.Children.Clear();
+		var row = new UniformGrid { Columns = 4, Margin = new Thickness(16, 13, 16, 13) };
+		foreach (var profile in entries)
+		{
+			var item = new StackPanel { Margin = new Thickness(5, 0, 5, 0), VerticalAlignment = VerticalAlignment.Top };
+			var cover = ArtworkPreview(profile.coverImage, 105, 112);
+			cover.HorizontalAlignment = HorizontalAlignment.Left;
+			item.Children.Add(cover);
+			var title = Copy(profile.name, 11, "#F0E9F8");
+			title.TextTrimming = TextTrimming.CharacterEllipsis;
+			title.Width = 132;
+			title.Height = 37;
+			title.Margin = new Thickness(0, 6, 0, 0);
+			item.Children.Add(title);
+			var open = Button("Open  →", () => OpenProfile(profile), false);
+			open.Height = 28;
+			open.Width = 78;
+			open.Margin = new Thickness(0, 4, 0, 0);
+			open.MinWidth = 0;
+			open.Padding = new Thickness(8, 0, 8, 0);
+			open.HorizontalContentAlignment = HorizontalAlignment.Center;
+			item.Children.Add(open);
+			row.Children.Add(item);
+		}
+		host.Children.Add(row);
+	}
+
+	string ExtensionDir
+	{
+		get
+		{
+			return Path.Combine(root, "extensions");
+		}
+	}
+
+	void ExtensionsPage()
+	{
+		SelectNav("extensions");
+		body.Children.Clear();
+		var sc = new ScrollViewer { VerticalScrollBarVisibility = ScrollBarVisibility.Auto };
+		body.Children.Add(sc);
+		var panel = new StackPanel { Margin = new Thickness(28) };
+		sc.Content = panel;
+		panel.Children.Add(Copy("Extensions", 27, "#F2EAFB"));
+		panel.Children.Add(Copy("Your local collection of community tools and resources.", 13, "#A99AB9"));
+		var actions = new StackPanel { Orientation = Orientation.Horizontal };
+		actions.Children.Add(Button("＋ Add extension", () => ImportExtension(), true));
+		actions.Children.Add(Button("Create extension", () => ExtensionEditor(null), false));
+		panel.Children.Add(actions);
+		Directory.CreateDirectory(ExtensionDir);
+		var files = Directory.GetFiles(ExtensionDir, "*.json");
+		if (files.Length == 0)
+			panel.Children.Add(Surface(new StackPanel { Children = { Copy("No extensions added yet", 18, "#E9DFF4"), Copy("Create a resource extension or import one from a local JSON file.", 12, "#9689A8") } }, new Thickness(22)));
+		foreach (var file in files)
+		{
+			try
+			{
+				var extension = JsonSerializer.Deserialize<AlterExtension>(File.ReadAllText(file));
+				if (extension == null || String.IsNullOrWhiteSpace(extension.name))
+					continue;
+				var card = new StackPanel();
+				card.Children.Add(Copy(extension.name, 17, "#F1E8FB"));
+				card.Children.Add(Copy(extension.description ?? "", 12, "#AA9DBB"));
+				card.Children.Add(Copy(String.IsNullOrWhiteSpace(extension.author) ? "Local extension" : "By " + extension.author, 10, AccentSoftHex));
+				var buttons = new StackPanel { Orientation = Orientation.Horizontal };
+				buttons.Children.Add(Button("Open link  ↗", () => OpenUrl(extension.url), true));
+				buttons.Children.Add(Button("Edit", () => ExtensionEditor(extension), false));
+				buttons.Children.Add(Button("Remove", () => { if (MessageBox.Show("Remove " + extension.name + "?", "Alter", MessageBoxButton.YesNo) == MessageBoxResult.Yes) { File.Delete(file); ExtensionsPage(); } }, false));
+				card.Children.Add(buttons);
+				panel.Children.Add(Card(card));
+			}
+			catch { }
+		}
+	}
+
+	bool ExtensionUrl(string value)
+	{
+		Uri uri;
+		return Uri.TryCreate(value, UriKind.Absolute, out uri) && uri.Scheme == "https";
+	}
+
+	void SaveExtension(AlterExtension extension)
+	{
+		Directory.CreateDirectory(ExtensionDir);
+		if (String.IsNullOrWhiteSpace(extension.id))
+			extension.id = Guid.NewGuid().ToString("N");
+		File.WriteAllText(Path.Combine(ExtensionDir, extension.id + ".json"), JsonSerializer.Serialize(extension));
+	}
+
+	void ExtensionEditor(AlterExtension extension)
+	{
+		bool fresh = extension == null;
+		if (fresh)
+			extension = new AlterExtension();
+		var w = new Window { Title = fresh ? "Create extension" : "Edit extension", Width = 480, Height = 410, Owner = this, WindowStartupLocation = WindowStartupLocation.CenterOwner, Background = Brush("#0B0A1B"), Foreground = Ink };
+		StyleDialog(w);
+		var p = new StackPanel { Margin = new Thickness(23) };
+		w.Content = p;
+		p.Children.Add(Copy("RESOURCE EXTENSION", 12, AccentSoftHex));
+		p.Children.Add(Copy("Name", 11, "#E5D9F1"));
+		var name = new TextBox { Text = extension.name ?? "" };
+		p.Children.Add(name);
+		p.Children.Add(Copy("Description", 11, "#E5D9F1"));
+		var description = new TextBox { Text = extension.description ?? "" };
+		p.Children.Add(description);
+		p.Children.Add(Copy("Author", 11, "#E5D9F1"));
+		var author = new TextBox { Text = extension.author ?? "" };
+		p.Children.Add(author);
+		p.Children.Add(Copy("HTTPS link", 11, "#E5D9F1"));
+		var url = new TextBox { Text = extension.url ?? "" };
+		p.Children.Add(url);
+		p.Children.Add(Copy("Resource extensions open a link. Trainer profiles are created in Library.", 11, "#9688AB"));
+		p.Children.Add(Button("Save extension", () => { if (String.IsNullOrWhiteSpace(name.Text) || !ExtensionUrl(url.Text)) { MessageBox.Show("Enter a name and an HTTPS link.", "Alter"); return; } extension.name = name.Text.Trim(); extension.description = description.Text.Trim(); extension.author = author.Text.Trim(); extension.url = url.Text.Trim(); SaveExtension(extension); w.Close(); ExtensionsPage(); }, true));
+		w.ShowDialog();
+	}
+
+	void ImportExtension()
+	{
+		var d = new Microsoft.Win32.OpenFileDialog { Filter = "Alter extension JSON|*.json" };
+		if (d.ShowDialog() != true)
+			return;
+		try
+		{
+			var e = JsonSerializer.Deserialize<AlterExtension>(File.ReadAllText(d.FileName));
+			if (e == null || String.IsNullOrWhiteSpace(e.name) || !ExtensionUrl(e.url))
+				throw new FormatException("Extension needs a name and HTTPS link.");
+			e.id = Guid.NewGuid().ToString("N");
+			SaveExtension(e);
+			ExtensionsPage();
+		}
+		catch (Exception ex) { MessageBox.Show(ex.Message, "Import extension"); }
+	}
+
+	void CommunityPage()
+	{
+		CommunityHubPage();
+	}
 }

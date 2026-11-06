@@ -1,0 +1,7 @@
+# Build output
+/Alter.exe
+bin/
+obj/
+
+# Local user data
+/settings.json

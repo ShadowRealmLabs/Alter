@@ -25,6 +25,6 @@ Imported profiles can write to another process. Read their addresses and code be
 
 ## Build and contribute
 
-On Windows with .NET Framework 4.x and WPF assemblies, run `./build.ps1` in PowerShell. Source is included in the source archive. Profile details are in [PROFILE_FORMAT.md](PROFILE_FORMAT.md), extension details in [EXTENSIONS.md](EXTENSIONS.md), and planned work in [ROADMAP.md](ROADMAP.md).
+On Windows with the .NET 10 SDK, run `./build.ps1` in PowerShell (or `dotnet build`). The app is written to `bin\publish` and needs the .NET 10 Desktop Runtime to run. Source is included in the source archive. Profile details are in [PROFILE_FORMAT.md](PROFILE_FORMAT.md), extension details in [EXTENSIONS.md](EXTENSIONS.md), and planned work in [ROADMAP.md](ROADMAP.md).
 
 The C# source and documentation use the MIT license in [LICENSE.txt](LICENSE.txt). The supplied Alter brand images in `assets/` have separate ownership. Third-party game artwork is omitted from the public packages; Home and Community show built-in banner treatments. See [ASSETS.md](ASSETS.md).
